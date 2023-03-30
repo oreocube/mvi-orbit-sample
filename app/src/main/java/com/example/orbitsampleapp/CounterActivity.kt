@@ -4,8 +4,11 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.orbitsampleapp.databinding.ActivityCounterBinding
-import org.orbitmvi.orbit.viewmodel.observe
+import kotlinx.coroutines.launch
 
 class CounterActivity : AppCompatActivity() {
     private val viewModel by viewModels<CounterViewModel>()
@@ -15,7 +18,7 @@ class CounterActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
         initViews()
-        viewModel.observe(lifecycleOwner = this, state = ::render, sideEffect = ::handleSideEffect)
+        observeData()
     }
 
     private fun initViews() = with(binding) {
@@ -23,8 +26,17 @@ class CounterActivity : AppCompatActivity() {
         btnDecrease.setOnClickListener { viewModel.decrease() }
     }
 
+    private fun observeData() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { viewModel.state.collect(::render) }
+                launch { viewModel.sideEffect.collect(::handleSideEffect) }
+            }
+        }
+    }
+
     private fun render(state: CounterState) = with(binding) {
-        tvNumber.text = state.value.toString()
+        tvNumber.text = state.count.toString()
     }
 
     private fun handleSideEffect(sideEffect: CounterSideEffect) {

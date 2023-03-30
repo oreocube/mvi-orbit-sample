@@ -1,5 +1,5 @@
 package com.example.orbitsampleapp
 
 data class CounterState(
-    val value: Int = 0
+    val count: Int = 0
 )

@@ -1,32 +1,50 @@
 package com.example.orbitsampleapp
 
 import androidx.lifecycle.ViewModel
-import org.orbitmvi.orbit.ContainerHost
-import org.orbitmvi.orbit.syntax.simple.intent
-import org.orbitmvi.orbit.syntax.simple.postSideEffect
-import org.orbitmvi.orbit.syntax.simple.reduce
-import org.orbitmvi.orbit.viewmodel.container
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-class CounterViewModel : ContainerHost<CounterState, CounterSideEffect>, ViewModel() {
-    override val container = container<CounterState, CounterSideEffect>(CounterState())
+class CounterViewModel : ViewModel() {
+    private val _state = MutableStateFlow(CounterState())
+    val state = _state.asStateFlow()
 
-    fun increase() = intent {
-        if (state.value < 10) {
-            reduce {
-                state.copy(value = state.value + 1)
+    private val _sideEffect = Channel<CounterSideEffect>()
+    val sideEffect = _sideEffect.receiveAsFlow()
+
+    fun increase() {
+        viewModelScope.launch {
+            if (state.value.count < 10) {
+                reduce { prev ->
+                    prev.copy(count = prev.count + 1)
+                }
+            } else {
+                postSideEffect(CounterSideEffect.Toast("10 이하여야 합니다."))
             }
-        } else {
-            postSideEffect(CounterSideEffect.Toast("10 이하여야 합니다."))
         }
     }
 
-    fun decrease() = intent {
-        if (state.value > 0) {
-            reduce {
-                state.copy(value = state.value - 1)
+    fun decrease() {
+        viewModelScope.launch {
+            if (state.value.count > 0) {
+                reduce { prev ->
+                    prev.copy(count = prev.count - 1)
+                }
+            } else {
+                postSideEffect(CounterSideEffect.Toast("0 이상이어야 합니다."))
             }
-        } else {
-            postSideEffect(CounterSideEffect.Toast("0 이상이어야 합니다."))
         }
+    }
+
+    private fun reduce(reducer: (CounterState) -> CounterState) {
+        _state.update(reducer)
+    }
+
+    private suspend fun postSideEffect(sideEffect: CounterSideEffect) {
+        _sideEffect.send(sideEffect)
     }
 }
