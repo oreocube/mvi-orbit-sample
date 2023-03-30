@@ -30,11 +30,3 @@ class CounterViewModel : ContainerHost<CounterState, CounterSideEffect>, ViewMod
         }
     }
 }
-
-data class CounterState(
-    val value: Int = 0
-)
-
-sealed class CounterSideEffect {
-    data class Toast(val text: String) : CounterSideEffect()
-}
